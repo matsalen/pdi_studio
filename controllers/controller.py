@@ -25,7 +25,7 @@ class Controller:
         )
         if path:
             image = self.model.load_image(path)
-            self.view.display_image(image)
+            self.view.display_original(image)
             self.view.log_action(f"Imagem carregada: {path}")
 
     def save_image(self):
@@ -42,10 +42,10 @@ class Controller:
 
     def apply_gray(self):
         result = self.model.convert_to_gray()
-        self.view.display_image(result)
+        self.view.display_processada(result)
         self.view.log_action("Conversão para tons de cinza aplicada.")
 
     def apply_equalization(self):
         result = self.model.equalize_histogram()
-        self.view.display_image(result)
+        self.view.display_processada(result)
         self.view.log_action("Equalização de histograma aplicada.")
