@@ -25,7 +25,7 @@ class Controller:
         )
         if path:
             image = self.model.load_image(path)
-            self.view.display_original(image)
+            self.view.display_image(image)
             self.view.log_action(f"Imagem carregada: {path}")
 
     def save_image(self):
@@ -42,10 +42,41 @@ class Controller:
 
     def apply_gray(self):
         result = self.model.convert_to_gray()
-        self.view.display_processada(result)
+        self.view.display_image_proc(result)
         self.view.log_action("Conversão para tons de cinza aplicada.")
 
     def apply_equalization(self):
         result = self.model.equalize_histogram()
-        self.view.display_processada(result)
+        self.view.display_image_proc(result)
         self.view.log_action("Equalização de histograma aplicada.")
+
+    def reset_image(self):
+        result = self.model.reset_image()
+        self.view.display_image_proc(result)
+        self.view.log_action("Imagem restaurada")
+
+    def apply_rgb(self):
+        result = self.model.convert_to_rgb()
+        self.view.display_image_proc(result)
+        self.view.log_action("Conversão para RGB")
+
+    def apply_rgba(self):
+        result = self.model.convert_to_rgba()
+        self.view.display_image_proc(result)
+        self.view.log_action("Conversão para RGBA")
+
+    def apply_hsv(self):
+        result = self.model.convert_to_hsv()
+        self.view.display_image_proc(result)
+        self.view.log_action("Conversão para HSV")
+
+    def apply_lab(self):
+        result = self.model.convert_to_lab()
+        self.view.display_image_proc(result)
+        self.view.log_action("Conversão para LAB")
+
+    def apply_cmyk(self):
+        result = self.model.convert_to_cmyk()
+        self.view.display_image_proc(result)
+        self.view.log_action("Conversão para CMYK")
+

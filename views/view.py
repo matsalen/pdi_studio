@@ -16,19 +16,22 @@ class View:
         self.image_panel = ImagePanel(self.root)
         self.control_panel = ControlPanel(self.root)
 
-        # Prioriza empacotar o painel de controle primeiro para reservar espaço do log
+        # Prioriza empacotar o painel de controle primeiro
         self.control_panel.frame.pack(side="right", fill="y")
-        self.image_panel.frame.pack(side="left", fill="both", expand=True)
+        
+        # AGORA, empacote apenas o main_frame do image_panel
+        # Ele vai pegar todo o espaço restante e preenchê-lo
+        self.image_panel.main_frame.pack(side="left", fill="both", expand=True)
+        
+        # Essas linhas abaixo não são mais necessárias aqui, 
+        # pois já foram feitas dentro do __init__ de ImagePanel
+        # self.image_panel.frame_original.pack(side="left", fill="both", expand=True)
+        # self.image_panel.frame_processada.pack(side="left", fill="both", expand=True)
 
-    '''def display_image(self, image):
-        self.image_panel.show_image(image)'''
+    def display_image(self, image):
+        self.image_panel.show_image(image)
 
-    # Exibe a imagem original
-    def display_original(self, image):
-        self.image_panel.show_original(image)
-
-    # Exibe a imagem processada
-    def display_processada(self, image):
+    def display_image_proc(self, image):
         self.image_panel.show_processada(image)
 
     def log_action(self, text):
