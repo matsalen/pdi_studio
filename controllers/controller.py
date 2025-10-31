@@ -41,42 +41,49 @@ class Controller:
             self.view.log_action(f"Imagem salva em: {path}")
 
     def apply_gray(self):
-        result = self.model.convert_to_gray()
-        self.view.display_image_proc(result)
-        self.view.log_action("Conversão para tons de cinza aplicada.")
+        tk_main_image, tk_hist_image = self.model.convert_to_gray()
+        self.view.display_image_proc(tk_main_image)
+        self.view.display_histogram(tk_hist_image)        
+        self.view.log_action("Filtro P&B aplicado.")
 
     def apply_equalization(self):
-        result = self.model.equalize_histogram()
-        self.view.display_image_proc(result)
+        tk_main_image, tk_hist_image = self.model.equalize_histogram()
+        self.view.display_image_proc(tk_main_image)
+        self.view.display_histogram(tk_hist_image)
         self.view.log_action("Equalização de histograma aplicada.")
 
     def reset_image(self):
-        result = self.model.reset_image()
-        self.view.display_image_proc(result)
+        tk_main_image, tk_hist_image = self.model.reset_image()
+        self.view.display_image_proc(tk_main_image)
+        self.view.display_histogram(tk_hist_image)
         self.view.log_action("Imagem restaurada")
 
     def apply_rgb(self):
-        result = self.model.convert_to_rgb()
-        self.view.display_image_proc(result)
+        tk_main_image, tk_hist_image = self.model.convert_to_rgb()
+        self.view.display_image_proc(tk_main_image)
+        self.view.display_histogram(tk_hist_image)
         self.view.log_action("Conversão para RGB")
 
     def apply_rgba(self):
-        result = self.model.convert_to_rgba()
-        self.view.display_image_proc(result)
+        tk_main_image, tk_hist_image = self.model.convert_to_rgba()
+        self.view.display_image_proc(tk_main_image)
+        self.view.display_histogram(tk_hist_image)
         self.view.log_action("Conversão para RGBA")
 
     def apply_hsv(self):
-        result = self.model.convert_to_hsv()
-        self.view.display_image_proc(result)
+        tk_main_image, tk_hist_image = self.model.convert_to_hsv()
+        self.view.display_image_proc(tk_main_image)
+        self.view.display_histogram(tk_hist_image)
         self.view.log_action("Conversão para HSV")
 
     def apply_lab(self):
-        result = self.model.convert_to_lab()
-        self.view.display_image_proc(result)
+        tk_main_image, tk_hist_image = self.model.convert_to_lab()
+        self.view.display_image_proc(tk_main_image)
+        self.view.display_histogram(tk_hist_image)
         self.view.log_action("Conversão para LAB")
 
     def apply_cmyk(self):
-        result = self.model.convert_to_cmyk()
-        self.view.display_image_proc(result)
+        tk_main_image, tk_hist_image = self.model.convert_to_cmyk()
+        self.view.display_image_proc(tk_main_image)
+        self.view.display_histogram(tk_hist_image)
         self.view.log_action("Conversão para CMYK")
-
