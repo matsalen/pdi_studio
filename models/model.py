@@ -34,12 +34,26 @@ class Model:
         return self._update_and_get_views(self.image)
 
     def equalize_histogram(self):
+        
         if self.image is None:
-            return None
-        eqhist = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
-        equalized = cv2.equalizeHist(eqhist)
-        self.image = cv2.cvtColor(equalized, cv2.COLOR_GRAY2BGR)
-        return self._update_and_get_views(self.image)
+            return None, None
+
+        # 1. Converte BGR -> HSV
+        img_hsv = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
+        
+        # 2. Separa os canais
+        h, s, v = cv2.split(img_hsv)
+        
+        # 3. Equaliza APENAS o canal 'V' (Valor/Brilho)
+        v_equalized = cv2.equalizeHist(v)
+        
+        # 4. Junta os canais (H e S originais + V novo)
+        img_hsv_equalized = cv2.merge([h, s, v_equalized])
+        
+        # 5. Converte HSV -> BGR
+        bgr_image = cv2.cvtColor(img_hsv_equalized, cv2.COLOR_HSV2BGR)
+        
+        return self._update_and_get_views(bgr_image)
     
     def convert_to_rgb(self):
         if self.image is None:
@@ -108,13 +122,11 @@ class Model:
             return None
 
         # 1. Crie uma "Figura" (o gráfico) com Matplotlib
-        # figsize=(4, 3) é um bom tamanho para caber no seu painel
-        fig = plt.figure(figsize=(2.9, 2.4), dpi=100) # <-- LINHA MODIFICADA
+        fig = plt.figure(figsize=(2.9, 2.4), dpi=100) 
         
         # 2. Verifique se a imagem é P&B ou Colorida
         if len(image_para_analise.shape) < 3:
             # É CINZA (1 canal)
-            # cv2.calcHist([imagem], [canal], mascara, [bins], [range])
             hist = cv2.calcHist([image_para_analise], [0], None, [256], [0, 256])
             plt.plot(hist, color='gray')
             plt.title("Histograma (Intensidade)")
@@ -143,9 +155,6 @@ class Model:
 
         # 5. Abra a imagem do gráfico (que está no buffer) com o PIL
         pil_image = Image.open(buf)
-
-        # 6. Converta de PIL (RGB) para OpenCV (BGR)
-        #    (Seguindo o padrão que discutimos, para que seu `to_tk_image` funcione)
         
         # Converte de RGBA (que o matplotlib salva) para RGB
         if pil_image.mode == 'RGBA':
@@ -154,7 +163,4 @@ class Model:
         numpy_rgb = np.array(pil_image)
         numpy_bgr = cv2.cvtColor(numpy_rgb, cv2.COLOR_RGB2BGR)
 
-        # 7. Retorne a imagem do gráfico pronta para o `to_tk_image`
-        #    (Estou assumindo que seu 'to_tk_image' está em outro lugar, 
-        #    baseado na sua função `convert_to_gray`)
         return numpy_bgr

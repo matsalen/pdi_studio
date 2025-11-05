@@ -17,45 +17,35 @@ class View:
         self.control_panel = ControlPanel(self.root)
 
         # Painel histograma
-        self.right_sidebar_frame = tk.Frame(self.root, bg="#333") # Use uma cor para depurar
+        self.right_sidebar_frame = tk.Frame(self.root, bg="#333") 
         self.tools_panel = tk.Frame(self.right_sidebar_frame, bg="#444", height=200)
 
         # 1. Crie os contêineres
-        self.right_sidebar_frame = tk.Frame(self.root, width=300) # <-- DÊ UMA LARGURA FIXA
-        self.control_panel = ControlPanel(self.right_sidebar_frame) # <-- FAÇA-O FILHO DA SIDEBAR
-        self.tools_panel = tk.Frame(self.right_sidebar_frame, height=250) # <-- DÊ UMA ALTURA FIXA
+        self.right_sidebar_frame = tk.Frame(self.root, width=300) 
+        self.control_panel = ControlPanel(self.right_sidebar_frame) 
+        self.tools_panel = tk.Frame(self.right_sidebar_frame, height=250) 
 
-        # 2. Crie o "display" do histograma DENTRO do tools_panel
+        # 2. Crie o display do histograma DENTRO do tools_panel
         self.histogram_label = tk.Label(self.tools_panel, bg="#222")
         self.histogram_label.pack(fill="both", expand=True, padx=5, pady=5)
 
         # --- ORDEM DE EMPACOTAMENTO CORRETA ---
 
         # 3. EMPACOTE A BARRA LATERAL PRIMEIRO (na direita)
-        #    Ela reserva seus 300px de largura e preenche a altura
         self.right_sidebar_frame.pack(side="right", fill="y")
-        self.right_sidebar_frame.pack_propagate(False) # <-- MÁGICA: Impede que os filhos esmaguem a sidebar
+        self.right_sidebar_frame.pack_propagate(False) 
 
         # 4. EMPACOTE O PAINEL DE IMAGEM DEPOIS (na esquerda)
-        #    Ele pega TODO o resto do espaço
         self.image_panel.main_frame.pack(side="left", fill="both", expand=True)
 
         # --- EMPACOTAMENTO DENTRO DA BARRA LATERAL ---
 
         # 5. Coloque o painel de ferramentas EMBAIXO, com altura fixa
         self.tools_panel.pack(side="bottom", fill="x")
-        self.tools_panel.pack_propagate(False) # <-- MÁGICA: Impede que o label esmague o painel
+        self.tools_panel.pack_propagate(False) 
 
         # 6. Coloque os logs EM CIMA, preenchendo o resto
-        self.control_panel.frame.pack(side="top", fill="both", expand=True)
-
-        # Prioriza empacotar o painel de controle primeiro
-        #self.control_panel.frame.pack(side="right", fill="y")
-        
-        # AGORA, empacote apenas o main_frame do image_panel
-        # Ele vai pegar todo o espaço restante e preenchê-lo
-        #self.image_panel.main_frame.pack(side="left", fill="both", expand=True)
-        
+        self.control_panel.frame.pack(side="top", fill="both", expand=True)        
 
     def display_image(self, image):
         self.image_panel.show_image(image)
