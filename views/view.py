@@ -23,29 +23,43 @@ class View:
         # 1. Crie os contêineres
         self.right_sidebar_frame = tk.Frame(self.root, width=300) 
         self.control_panel = ControlPanel(self.right_sidebar_frame) 
-        self.tools_panel = tk.Frame(self.right_sidebar_frame, height=250) 
+        self.tools_panel = tk.Frame(self.right_sidebar_frame, height=350) 
 
-        # 2. Crie o display do histograma DENTRO do tools_panel
+        # --- NOVOS WIDGETS DE SLIDER ---
+        # (Coloque-os DENTRO do self.tools_panel)
+        
+        # Label do Frame
+        tk.Label(self.tools_panel, text="Ajustes", font=("Arial", 10, "bold")).pack(pady=5)
+
+        # Contraste (Alpha)
+        # Range de 0.1 (sem contraste) a 3.0 (alto contraste)
+        self.contrast_slider = tk.Scale(self.tools_panel,
+                                        from_=0.1, to=3.0, resolution=0.1,
+                                        orient="horizontal", label="Contraste (α)",
+                                        length=280)
+        self.contrast_slider.set(1.0) # Valor padrão
+        self.contrast_slider.pack(fill='x', padx=5)
+
+        # Brilho (Beta)
+        # Range de -100 (escuro) a 100 (claro)
+        self.brightness_slider = tk.Scale(self.tools_panel,
+                                          from_=-100, to=100,
+                                          orient="horizontal", label="Brilho (β)",
+                                          length=280)
+        self.brightness_slider.set(0) # Valor padrão
+        self.brightness_slider.pack(fill='x', padx=5)
+        
+        # O Label do Histograma (agora vai embaixo dos sliders)
         self.histogram_label = tk.Label(self.tools_panel, bg="#222")
         self.histogram_label.pack(fill="both", expand=True, padx=5, pady=5)
 
-        # --- ORDEM DE EMPACOTAMENTO CORRETA ---
-
-        # 3. EMPACOTE A BARRA LATERAL PRIMEIRO (na direita)
+        # --- (Resto do seu código de empacotamento) ---
         self.right_sidebar_frame.pack(side="right", fill="y")
-        self.right_sidebar_frame.pack_propagate(False) 
-
-        # 4. EMPACOTE O PAINEL DE IMAGEM DEPOIS (na esquerda)
+        self.right_sidebar_frame.pack_propagate(False)
         self.image_panel.main_frame.pack(side="left", fill="both", expand=True)
-
-        # --- EMPACOTAMENTO DENTRO DA BARRA LATERAL ---
-
-        # 5. Coloque o painel de ferramentas EMBAIXO, com altura fixa
         self.tools_panel.pack(side="bottom", fill="x")
-        self.tools_panel.pack_propagate(False) 
-
-        # 6. Coloque os logs EM CIMA, preenchendo o resto
-        self.control_panel.frame.pack(side="top", fill="both", expand=True)        
+        self.tools_panel.pack_propagate(False)
+        self.control_panel.frame.pack(side="top", fill="both", expand=True)       
 
     def display_image(self, image):
         self.image_panel.show_image(image)
@@ -57,6 +71,12 @@ class View:
         """ Coloca a imagem do gráfico no painel de ferramentas. """
         self.histogram_label.config(image=histogram_image)
         self.histogram_label.image = histogram_image # Mantém a referência
+
+    # --- NOVO MÉTODO ---
+    def reset_sliders(self):
+        """ Reseta os sliders para os valores padrão. """
+        self.contrast_slider.set(1.0)
+        self.brightness_slider.set(0)
 
     def log_action(self, text):
         self.control_panel.add_log(text)
