@@ -2,69 +2,95 @@ import cv2
 from PIL import Image, ImageTk
 import numpy as np
 import matplotlib.pyplot as plt
-import io  # Input/Output
+import io  # Input/Output, pra gambiarra do gráfico
 
 class Model:
     def __init__(self):
+        # self.image é a foto da DIREITA (a que a gente zoa)
         self.image = None
+        # self.original é a foto da ESQUERDA (a intocada, o backup)
         self.original = None
+        # self.last_filtered_image é a "base" pros sliders.
+        # Se você aplica "Tons de Cinza", essa foto vira a base.
+        # Os sliders de brilho vão mexer na foto em *tons de cinza*.
+        self.last_filtered_image = None
 
     def load_image(self, path):
+        # Lê a imagem do HD
         self.image = cv2.imread(path)
+        # Faz a cópia de segurança
         self.original = self.image.copy()
+        # A primeira "base" pros sliders é a própria imagem
+        self.last_filtered_image = self.image.copy()
+        
+        # Devolve a imagem 'tk' pra View (pro painel da ESQUERDA)
         return self.to_tk_image(self.image)
 
     def save_image(self, path):
+        # Salva a imagem zoada (self.image) no HD
         if self.image is not None:
             cv2.imwrite(path, self.image)
 
     def reset_image(self):
+        # O "CTRL+Z". Joga fora a imagem zoada...
         if self.original is not None:
+            # ...e pega a cópia de segurança de volta.
             self.image = self.original.copy()
+            # Manda o 'portão' atualizar tudo (e salvar como nova base)
             return self._update_and_get_views(self.image, save_as_base=True)
         else:
             return None, None
-        
-    # --- NOVA FUNÇÃO DE LÓGICA ---
-    
+            
+    # adjust_brightness_contrast: A mágica dos sliders.
+    # alpha = Contraste, beta = Brilho
     def adjust_brightness_contrast(self, alpha, beta):
-        """
-        Aplica brilho/contraste lendo da "última imagem filtrada".
-        NÃO salva isso como a nova base.
-        """
+        # Se não tiver uma "base" pra mexer, não faz nada.
         if self.last_filtered_image is None:
             return None, None
             
-        # A MÁGICA:
-        # cv2.convertScaleAbs(imagem, alpha=CONTRASTE, beta=BRILHO)
+        # A matemática do brilho/contraste.
+        # O importante: ele lê da 'base' (last_filtered_image),
+        # e não da 'self.image' (que foi o resultado do slider *anterior*).
+        # Isso impede o efeito de "empilhar".
         adjusted_image = cv2.convertScaleAbs(self.last_filtered_image, alpha=alpha, beta=beta)
         
-        # Chama o gatekeeper, mas NÃO salva como nova base
+        # Chama o 'portão', mas com 'save_as_base=False'.
+        # Isso aqui é SÓ UMA PRÉVIA. Não salva como a nova base.
         return self._update_and_get_views(adjusted_image, save_as_base=False)
 
-    # ========== Operações de PDI ==========
+    # -----------------------------------------------------------------
+    # O PADRÃO DOS FILTROS (Tudo abaixo)
+    # 1. Faz a matemática (cv2.cvtColor, cv2.threshold, etc.).
+    # 2. Garante que o resultado final seja BGR (pra manter o padrão).
+    # 3. Chama o 'portão' _update_and_get_views,
+    #    passando a nova imagem e 'save_as_base=True'.
+    # -----------------------------------------------------------------
+
     def convert_to_gray(self):
         if self.image is None:
-            return None
+            return None, None # (o 'None, None' é pra tupla que o Controller espera)
         gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
-        self.image = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
-        return self._update_and_get_views(self.image, save_as_base=True)
+        # Converte DE VOLTA pra BGR. É, eu sei, parece burro.
+        # Mas é pra manter os 3 canais e o resto do código (hist, save) feliz.
+        bgr_image = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+        return self._update_and_get_views(bgr_image, save_as_base=True)
 
+    # equalize_histogram: O "photoshop automático"
     def equalize_histogram(self):
-        
         if self.image is None:
             return None, None
 
-        # 1. Converte BGR -> HSV
+        # Pra não zoar as cores, a gente NUNCA equaliza BGR.
+        # 1. Converte BGR -> HSV (Matiz, Saturação, BRILHO)
         img_hsv = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
         
         # 2. Separa os canais
         h, s, v = cv2.split(img_hsv)
         
-        # 3. Equaliza APENAS o canal 'V' (Valor/Brilho)
+        # 3. Equaliza SÓ o canal 'V' (Brilho)
         v_equalized = cv2.equalizeHist(v)
         
-        # 4. Junta os canais (H e S originais + V novo)
+        # 4. Junta de volta (cores originais + brilho novo)
         img_hsv_equalized = cv2.merge([h, s, v_equalized])
         
         # 5. Converte HSV -> BGR
@@ -72,198 +98,186 @@ class Model:
         
         return self._update_and_get_views(bgr_image, save_as_base=True)
     
+    # O resto das conversões são "bate-e-volta".
+    # Elas convertem (ex: BGR->HSV) e convertem de volta (HSV->BGR).
+    # O resultado é uma imagem BGR que "parece" HSV,
+    # mostrando os canais de forma bizarra. É pra teste visual.
+    
     def convert_to_rgb(self):
-        if self.image is None:
-            return None
+        if self.image is None: return None, None
         rgb = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
-        self.image = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
-        return self._update_and_get_views(self.image, save_as_base=True)
+        bgr_image = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR) # Sim, BGR->RGB->BGR. Não faz nada.
+        return self._update_and_get_views(bgr_image, save_as_base=True)
     
     def convert_to_rgba(self):
-        if self.image is None:
-            return None
+        if self.image is None: return None, None
         rgba = cv2.cvtColor(self.image, cv2.COLOR_BGR2BGRA)
-        self.image = cv2.cvtColor(rgba, cv2.COLOR_BGRA2BGR)
-        return self._update_and_get_views(self.image, save_as_base=True)
+        bgr_image = cv2.cvtColor(rgba, cv2.COLOR_BGRA2BGR) # BGR->BGRA->BGR. Perde o Alfa.
+        return self._update_and_get_views(bgr_image, save_as_base=True)
     
     def convert_to_hsv(self):
-        if self.image is None:
-            return None
+        if self.image is None: return None, None
         hsv = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
-        self.image = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-        return self._update_and_get_views(self.image, save_as_base=True)
+        bgr_image = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR) # BGR->HSV->BGR (Pode perder cor)
+        return self._update_and_get_views(bgr_image, save_as_base=True)
     
     def convert_to_lab(self):
-        if self.image is None:
-            return None
+        if self.image is None: return None, None
         lab = cv2.cvtColor(self.image, cv2.COLOR_BGR2LAB)
-        self.image = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
-        return self._update_and_get_views(self.image, save_as_base=True)
+        bgr_image = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR) # BGR->LAB->BGR (Pode perder cor)
+        return self._update_and_get_views(bgr_image, save_as_base=True)
     
+    # CMYK é o chatinho que precisa do PIL (Pillow) no meio
     def convert_to_cmyk(self):
-        if self.image is None:
-            return None
-        cmyk = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
-        pil_img = Image.fromarray(cmyk)
+        if self.image is None: return None, None
+        
+        # 1. OpenCV (BGR) -> OpenCV (RGB)
+        cmyk_step1 = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
+        # 2. OpenCV (RGB) -> PIL (RGB)
+        pil_img = Image.fromarray(cmyk_step1)
+        # 3. PIL (RGB) -> PIL (CMYK)
         pil_cmyk = pil_img.convert('CMYK')
+        # 4. PIL (CMYK) -> PIL (RGB) (pra poder ver na tela)
         pil_rgb = pil_cmyk.convert('RGB')
+        # 5. PIL (RGB) -> Numpy/OpenCV (RGB)
         numpy_rgb = np.array(pil_rgb)
+        # 6. OpenCV (RGB) -> OpenCV (BGR) (pro nosso padrão)
         bgr_image = cv2.cvtColor(numpy_rgb, cv2.COLOR_RGB2BGR)
 
         return self._update_and_get_views(bgr_image, save_as_base=True)  
-    
+
+    # apply_otsu_threshold: O limiar "automágico".
+    # Ele acha o melhor valor pra separar "fundo" de "frente".
     def apply_otsu_threshold(self):
         if self.image is None: return None, None
-
-        # 1. Converte para P&B
         gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
         
-        # 2. Aplica o threshold de Otsu
-        # O '0' é ignorado, pois o Otsu encontra o valor
-        # O 'ret_val' será o limiar que o Otsu calculou (legal para logar!)
+        # O '0' é só um placeholder, o OTSU acha o valor certo.
         ret_val, binary_img = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         
-        # 3. Converte de volta para BGR
         bgr_image = cv2.cvtColor(binary_img, cv2.COLOR_GRAY2BGR)
-        
-        # 4. Chama o gatekeeper
-        # (O Controller pode logar o ret_val se quiser)
         return self._update_and_get_views(bgr_image, save_as_base=True)
     
+    # apply_global_threshold: O limiar "burro".
+    # Você manda o valor (ex: 127) e ele corta ali.
     def apply_global_threshold(self, threshold_value=127):
         if self.image is None: return None, None
-
-        # 1. Converte para P&B
         gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
         
-        # 2. Aplica o threshold com o valor fixo
         ret, binary_img = cv2.threshold(gray, threshold_value, 255, cv2.THRESH_BINARY)
         
-        # 3. Converte de volta para BGR
         bgr_image = cv2.cvtColor(binary_img, cv2.COLOR_GRAY2BGR)
-        
-        # 4. Chama o gatekeeper
         return self._update_and_get_views(bgr_image, save_as_base=True)
     
+    # apply_adaptive_threshold: O limiar "esperto" (parece um desenho).
+    # Ele não usa UM valor, mas calcula o limiar pra CADA "vizinhança".
     def apply_adaptive_threshold(self):
         if self.image is None: return None, None
-
-        # 1. Converte para P&B
         gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
         
-        # 2. Aplica o threshold adaptativo (baseado na média da vizinhança)
-        # 11 = Tamanho do bloco (bloco 11x11 pixels)
-        # 2 = Constante C (subtraída da média)
+        # Bloco de 11x11, C=2 (ajustes finos)
         binary_img = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C,
-                                            cv2.THRESH_BINARY, 11, 2)
+                                           cv2.THRESH_BINARY, 11, 2)
         
-        # 3. Converte de volta para BGR
         bgr_image = cv2.cvtColor(binary_img, cv2.COLOR_GRAY2BGR)
-        
-        # 4. Chama o gatekeeper
         return self._update_and_get_views(bgr_image, save_as_base=True)
     
+    # apply_posterization: O "multi-tons".
+    # Reduz de 256 tons de cinza para 'levels' (ex: 4 tons).
     def apply_posterization(self, levels=4):
-        """
-        Reduz a imagem para 'levels' (níveis) de tons em P&B.
-        (Ex: levels=2 é binarização, levels=4 são 4 tons de cinza)
-        """
         if self.image is None: return None, None
         
-        # 1. Converte para P&B
         gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
         
-        # 2. Calcula o tamanho de cada "degrau"
-        step = 256.0 / levels # Ex: 4 níveis -> step = 64.0
-        
-        # 3. Mapeia todos os pixels para o meio do degrau
-        # (gray / step) -> Mapeia 0-255 para 0-4
-        # np.floor(...) -> Arredonda para 0, 1, 2, 3
-        # (...) * step -> Mapeia de volta (0, 64, 128, 192)
-        # (...) + (step / 2) -> Pega o meio (32, 96, 160, 224)
+        # Matemática chata pra "empilhar" os pixels em 'levels' degraus.
+        step = 256.0 / levels
         quantized = np.floor(gray / step) * step + (step / 2)
-        
-        # 4. Garante que o tipo de dado é 'uint8' (imagem)
         quantized_img = np.uint8(quantized)
         
-        # 5. Converte de volta para BGR
         bgr_image = cv2.cvtColor(quantized_img, cv2.COLOR_GRAY2BGR)
-        
-        # 6. Chama o gatekeeper
         return self._update_and_get_views(bgr_image, save_as_base=True)
 
-    def _update_and_get_views(self, new_bgr_image, save_as_base=True): # <-- MUDANÇA
-        """
-        Função 'gatekeeper' PRIVADA.
-        """
-        # 1. Salva a nova imagem como a imagem 'mestra'
+    # _update_and_get_views: O "PORTÃO".
+    # O coração do Model. TODO filtro DESTRUTIVO (quase todos)
+    # termina chamando essa função.
+    def _update_and_get_views(self, new_bgr_image, save_as_base=True):
+        
+        # 1. Atualiza a imagem principal (da direita)
         self.image = new_bgr_image 
         
-        # 2. SALVA COMO BASE (só se for um filtro, não um slider)
+        # 2. Se for um filtro (não um slider), salva como a nova "base".
         if save_as_base:
             self.last_filtered_image = new_bgr_image.copy()
         
-        # 3. Gera a imagem principal para a View
+        # 3. Gera a imagem 'Tk' pra View (painel da direita)
         tk_main_image = self.to_tk_image(self.image)
         
-        # 4. Gera a imagem do histograma para a View
+        # 4. Gera o GRÁFICO do histograma (como imagem 'Tk')
         histogram_bgr_img = self.create_histogram_image(self.image)
         tk_hist_image = self.to_tk_image(histogram_bgr_img)
         
-        # 5. Retorna AMBAS as imagens prontas
+        # 5. Devolve os DOIS (imagem + gráfico) pro Controller
         return tk_main_image, tk_hist_image  
 
-    # ========== Conversão ==========
+    # to_tk_image: O "Tradutor".
+    # Converte a imagem do OpenCV (BGR) pra algo que o Tkinter entende (PhotoImage).
     def to_tk_image(self, cv_image):
+        if cv_image is None:
+            return None
+        # BGR (OpenCV) -> RGB (OpenCV)
         rgb = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+        # RGB (OpenCV) -> Imagem PIL
         img = Image.fromarray(rgb)
+        # Imagem PIL -> PhotoImage (Tkinter)
         return ImageTk.PhotoImage(img)
     
+    # create_histogram_image: A "Gambiarra Oficial"
+    # O Matplotlib (que desenha o gráfico) não fala com o Tkinter (pra imagem).
+    # Então a gente...
     def create_histogram_image(self, image_para_analise):
-
         if image_para_analise is None:
             return None
 
-        # 1. Crie uma "Figura" (o gráfico) com Matplotlib
+        # 1. Manda o Matplotlib desenhar o gráfico (pequeno)
         fig = plt.figure(figsize=(2.9, 2.4), dpi=100) 
         
-        # 2. Verifique se a imagem é P&B ou Colorida
-        if len(image_para_analise.shape) < 3:
-            # É CINZA (1 canal)
+        # Se for P&B (1 canal), desenha 1 linha
+        if len(image_para_analise.shape) < 3 or (image_para_analise[:,:,0] == image_para_analise[:,:,1]).all():
             hist = cv2.calcHist([image_para_analise], [0], None, [256], [0, 256])
             plt.plot(hist, color='gray')
             plt.title("Histograma (Intensidade)")
         
+        # Se for Colorido (3 canais), desenha 3 linhas (B, G, R)
         else:
-            # É COLORIDA (3 canais - BGR)
-            colors = ('b', 'g', 'r') # Cores do OpenCV
+            colors = ('b', 'g', 'r')
             for i, color in enumerate(colors):
                 hist = cv2.calcHist([image_para_analise], [i], None, [256], [0, 256])
                 plt.plot(hist, color=color)
             plt.title("Histograma (BGR)")
 
-        # Define os limites do gráfico
         plt.xlim([0, 256])
         plt.ylabel("Nº de Pixels")
         plt.xlabel("Intensidade")
-        plt.tight_layout()
+        plt.tight_layout() # Pra não cortar os rótulos
 
-        # 3. Salve o gráfico em um buffer de memória
+        # 2. Salva esse gráfico como um "arquivo PNG na memória"
         buf = io.BytesIO()
-        fig.savefig(buf, format='png') # <-- LINHA MODIFICADA
+        fig.savefig(buf, format='png')
         buf.seek(0)
 
-        # 4. Limpe o gráfico da memória do Matplotlib
+        # 3. Limpa o Matplotlib (pra não vazar memória)
         plt.close(fig)
 
-        # 5. Abra a imagem do gráfico (que está no buffer) com o PIL
+        # 4. Abre esse "PNG da memória" com o PIL
         pil_image = Image.open(buf)
         
-        # Converte de RGBA (que o matplotlib salva) para RGB
+        # 5. Converte o gráfico (RGBA) pra RGB
         if pil_image.mode == 'RGBA':
              pil_image = pil_image.convert('RGB')
              
+        # 6. Converte o gráfico (RGB) pra BGR (pra nosso 'to_tk_image' usar)
         numpy_rgb = np.array(pil_image)
         numpy_bgr = cv2.cvtColor(numpy_rgb, cv2.COLOR_RGB2BGR)
 
+        # 7. Retorna a IMAGEM DO GRÁFICO (em BGR)
         return numpy_bgr

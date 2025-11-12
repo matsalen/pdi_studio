@@ -23,9 +23,13 @@ class MenuBar:
         filter_menu.add_command(label="Converter para LAB", command=controller.apply_lab)
         filter_menu.add_command(label="Converter para CMYK", command=controller.apply_cmyk)
         filter_menu.add_separator()
-        filter_menu.add_command(label="Restaurar", command=controller.reset_image)
+        filter_menu.add_command(label="Restaurar", command=controller.reset_image)       
+        self.menubar.add_cascade(label="Filtros", menu=filter_menu)
+
+        #Menu Limiarização
+        filter_menu = tk.Menu(self.menubar, tearoff=0)
         filter_menu.add_command(label="Limiar: Otsu (Automático)", command=controller.apply_otsu)
-        filter_menu.add_command(label="Limiar: Global (127)", command=controller.apply_global_127)
+        filter_menu.add_command(label="Limiar: Global (Ajustável)...", command=controller.apply_global_adjustable)
         filter_menu.add_command(label="Limiar: Adaptativo", command=controller.apply_adaptive)
         filter_menu.add_command(label="Posterizar (4 Tons)", command=controller.apply_posterize_4)
-        self.menubar.add_cascade(label="Filtros", menu=filter_menu)
+        self.menubar.add_cascade(label="Limiarização", menu=filter_menu)
